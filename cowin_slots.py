@@ -1,7 +1,6 @@
 import http.client
 import json
 import datetime
-import sys
 import time
 from os import system
 from beepy import beep
@@ -22,30 +21,38 @@ def print_report(session_details, center_details):
               f"Available capacity  :{session_details['available_capacity']}\n"
               f"Min age limit       :{session_details['min_age_limit']}\n"
               f"Vaccine             :{session_details['vaccine']}")
+        print('\nClick here https://www.cowin.gov.in/home to book your appointment')
         while True: beep(sound=4)
 
 
-def check_slot(day):
+def check_slot(dates):
+    date_param = ','.join(dates)
     try:
         conn = http.client.HTTPSConnection("cdn-api.co-vin.in")
-        conn.request("GET", f"/api/v2/appointment/sessions/public/calendarByPin?pincode={pin_code}&date={day}")
+        conn.request("GET", f"/api/v2/appointment/sessions/public/calendarByPin?pincode={pin_code}&date={date_param}")
         response = json.loads(conn.getresponse().read().decode("utf-8"))
-        [[print_report(session, center) if session['available_capacity'] > 0 and session['min_age_limit'] in age else print(
-            'Already booked') for session in center['sessions']] for center in response['centers']] if len(
-            response['centers']) > 0 else print(f"\t{day}: No centers available")
+        if len(response['centers']) > 0:
+            for center in response['centers']:
+                for session in center['sessions']:
+                    print(f"\t{session['date']} :", end=' ')
+                    if session['min_age_limit'] in age:
+                        if session['available_capacity'] > 0:
+                            print_report(session, center)
+                        else:
+                            print(f"Center already booked   >> {center['name']}")
+                    else:
+                        print(f"Not available for {age[0]}    >> {center['name']}")
+        else:
+            print(f'\tNo centers available for any requested date')
     except:
         print('\tCowin API is not reachable right now')
 
 
-
-dates = [(datetime.datetime.now() + datetime.timedelta(days=day)).strftime('%d-%m-%Y') for day in range(days)]
+days = [(datetime.datetime.now() + datetime.timedelta(days=day)).strftime('%d-%m-%Y') for day in range(days)]
 iterations = 1
 while True:
-    print(f'\nIteration: {iterations}, {datetime.datetime.now().strftime("%H:%M")}')
-    [check_slot(day) for day in dates]
+    print(f'Iteration: {iterations}, {datetime.datetime.now().strftime("%d-%m-%Y %I:%M %p")}')
+    check_slot(days)
     iterations += 1
-    while refresh_time > 0:
-        print(f'Checking again in {refresh_time} seconds..', end='\r')
-        refresh_time -= 1
-        time.sleep(1)
+    while refresh_time > 0: print(f'Checking again in {refresh_time} seconds..', end='\r'); refresh_time -= 1; time.sleep(1)
     refresh_time = config.refresh_time
