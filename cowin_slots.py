@@ -7,10 +7,10 @@ from beepy import beep
 import config
 
 pin_codes = config.pin_codes
-refresh_time = config.refresh_time
 days = config.days
 age = config.age
 doses = config.dose
+refresh_time = 30 if config.refresh_time < 30 else config.refresh_time
 
 
 def print_report(session_details, center_details, dose, pin_code):
